@@ -55,7 +55,7 @@ app.use("/api/delver", delvreRoutes);
 // 8️⃣ اتصال MongoDB
 // ------------------------
 mongoose
-  .connect("mongodb://127.0.0.1:27017/testdb")
+  .connect("mongodb://localhost/:27017/testdb")
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.log("❌ MongoDB Error:", err));
 
