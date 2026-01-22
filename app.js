@@ -57,7 +57,7 @@ app.use("/api" , test)
 // بدل أي object استخدم رابط نصي مباشرة
 
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy.rlwy.net:31109")
   .then(() => console.log("✅ Mongoose Connected"))
   .catch((err) => console.log("❌ Mongoose Error:", err));
 
