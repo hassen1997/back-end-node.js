@@ -54,8 +54,10 @@ app.use("/api/delver", delvreRoutes);
 
 // بدل أي object استخدم رابط نصي مباشرة
 mongoose.connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy.rlwy.net:31109")
+  
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Error:", err));
+  if (mongoose.connections[0].readyState) return; // لمنع الاتصال المزدوج
 
 // مثال Google Service Account
 
