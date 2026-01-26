@@ -58,7 +58,6 @@ mongoose.connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy
   .catch(err => console.log("❌ MongoDB Error:", err));
 
 // مثال Google Service Account
-const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
 
 // 9️⃣ تشغيل السيرفر
 // ------------------------
