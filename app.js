@@ -6,8 +6,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 
-
-
 // ------------------------
 // 2️⃣ استدعاء Routes
 // ------------------------
@@ -17,7 +15,8 @@ const allcatgores = require("./allcatgores");
 const authRoutes = require("./users/auth");
 const locationRoutes = require("./users/location");
 const orderRoutes = require("./route/order");
-const delvreRoutes = require("./users/delvere")
+const delvreRoutes = require("./users/delvere");
+
 // ------------------------
 // 3️⃣ إعداد البيئة
 // ------------------------
@@ -32,14 +31,14 @@ const app = express();
 // 5️⃣ Middlewares
 // ------------------------
 app.use(cors());
-app.use(express.json()); // لتحليل JSON
-app.use(express.urlencoded({ extended: true })); // لتحليل form-data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ------------------------
-// 6️⃣ إعداد الملفات الثابتة
+// 6️⃣ الملفات الثابتة
 // ------------------------
-app.use("/uploads", express.static("uploads"));       // منتجات الغذائية
-app.use("/uplodhome", express.static("uplodhome"));   // صور الصفحة الرئيسية
+app.use("/uploads", express.static("uploads"));
+app.use("/uplodhome", express.static("uplodhome"));
 
 // ------------------------
 // 7️⃣ Routes
@@ -51,19 +50,27 @@ app.use("/api/home", home);
 app.use("/api/user", locationRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/delver", delvreRoutes);
+
+// Route أساسي لتأكيد تشغيل السيرفر
 app.get("/", (req, res) => res.send("Server is running"));
 
-// بدل أي object استخدم رابط نصي مباشرة
-mongoose.connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy.rlwy.net:31109")
-  
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Error:", err));
+// ------------------------
+// 8️⃣ اتصال MongoDB
+// ------------------------
+const connectDB = async () => {
   if (mongoose.connections[0].readyState) return; // لمنع الاتصال المزدوج
+  try {
+    await mongoose.connect(process.env.MONGO_URI); // ضع URI في .env
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.error("❌ MongoDB Error:", err);
+    process.exit(1);
+  }
+};
+connectDB();
 
-// مثال Google Service Account
-
+// ------------------------
 // 9️⃣ تشغيل السيرفر
 // ------------------------
-app.listen(5000,  () => {
-  console.log("🚀 Server running on port 5000");
-});
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
