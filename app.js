@@ -51,6 +51,7 @@ app.use("/api/home", home);
 app.use("/api/user", locationRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/delver", delvreRoutes);
+app.get("/", (req, res) => res.send("Server is running"));
 
 // بدل أي object استخدم رابط نصي مباشرة
 mongoose.connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy.rlwy.net:31109")
