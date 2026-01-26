@@ -54,7 +54,7 @@ app.use("/api/delver", delvreRoutes);
 
 // بدل أي object استخدم رابط نصي مباشرة
 const mongoURI = process.env.MONGO_URI; // ضع URI في Railway Secret
-mongoose.connect("mongodb://localhost:27017/testdb")
+mongoose.connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy.rlwy.net:31109")
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Error:", err));
 
