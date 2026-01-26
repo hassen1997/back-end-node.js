@@ -5,6 +5,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+require("dotenv").config();
 
 // ------------------------
 // 2️⃣ استدعاء Routes
@@ -18,30 +19,25 @@ const orderRoutes = require("./route/order");
 const delvreRoutes = require("./users/delvere");
 
 // ------------------------
-// 3️⃣ إعداد البيئة
-// ------------------------
-require("dotenv").config();
-
-// ------------------------
-// 4️⃣ إنشاء التطبيق
+// 3️⃣ إنشاء التطبيق
 // ------------------------
 const app = express();
 
 // ------------------------
-// 5️⃣ Middlewares
+// 4️⃣ Middlewares
 // ------------------------
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ------------------------
-// 6️⃣ الملفات الثابتة
+// 5️⃣ إعداد الملفات الثابتة
 // ------------------------
-app.use("/uploads", express.static("uploads"));
-app.use("/uplodhome", express.static("uplodhome"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uplodhome", express.static(path.join(__dirname, "uplodhome")));
 
 // ------------------------
-// 7️⃣ Routes
+// 6️⃣ Routes
 // ------------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/product", productRoute);
@@ -55,22 +51,29 @@ app.use("/api/delver", delvreRoutes);
 app.get("/", (req, res) => res.send("Server is running"));
 
 // ------------------------
-// 8️⃣ اتصال MongoDB
+// 7️⃣ اتصال MongoDB
 // ------------------------
 const connectDB = async () => {
-  if (mongoose.connections[0].readyState) return; // لمنع الاتصال المزدوج
   try {
-    await mongoose.connect(process.env.MONGO_URI); // ضع URI في .env
+    if (mongoose.connections[0].readyState) return; // لمنع الاتصال المزدوج
+    await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ MongoDB Connected");
   } catch (err) {
     console.error("❌ MongoDB Error:", err);
-    process.exit(1);
+    process.exit(1); // إذا فشل الاتصال، يوقف السيرفر
   }
 };
 connectDB();
 
 // ------------------------
-// 9️⃣ تشغيل السيرفر
+// 8️⃣ تشغيل السيرفر على Railway
 // ------------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+async function bootstrap() {
+  await app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
+
+bootstrap();
