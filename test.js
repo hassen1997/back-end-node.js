@@ -7,43 +7,77 @@ const route = express.Router()
 
 
 
-const expoUsers = {}; // لتخزين توكنات Expo مؤقتًا
+let expoToken = null;
 
-// حفظ توكن
+// استقبال التوكن من التطبيق
 route.post("/save-token", (req, res) => {
-  const { email, token } = req.body;
-  if (!email || !token) return res.status(400).json({ message: "مفقود" });
+  const { token } = req.body;
 
-  expoUsers[email] = token;
-  console.log(`📌 حفظ التوكن: ${token} للمستخدم: ${email}`);
+  if (!token) {
+    return res.status(400).json({ message: "Token مفقود" });
+  }
+
+  expoToken = token;
+  console.log("✅ Expo Token Saved:", token);
+
   res.json({ success: true });
 });
 
-// إرسال إشعار تجريبي
-route.post("/send-notification", async (req, res) => {
-  const { email } = req.body;
-
-  const token = expoUsers[email];
-  if (!token) return res.status(400).json({ message: "لا يوجد توكن" });
+// إرسال إشعار تجربة (طلب جديد)
+route.post("/send-test-order", async (req, res) => {
+  if (!expoToken) {
+    return res.status(400).json({ message: "لا يوجد Token" });
+  }
 
   const message = {
-    to: token,
+    to: expoToken,
     sound: "default",
-    title: "📦 إشعار تجريبي",
-    body: "هذا إشعار تجريبي من السيرفر",
+    title: "📦 طلب جديد",
+    body: "لديك طلب جديد، اضغط للمشاهدة",
+    data: {
+      order: {
+        name: "أحمد علي",
+        phone: "07701234567",
+        location: "بغداد - الكرادة",
+        totalPrice: 45000,
+        items: [
+          {
+            _id: "1",
+            title: "هاتف سامسونگ",
+            quantity: 1,
+            price: 35000,
+            image:
+              "https://via.placeholder.com/300x200.png?text=Samsung+Phone",
+          },
+          {
+            _id: "2",
+            title: "سماعة بلوتوث",
+            quantity: 2,
+            price: 5000,
+            image:
+              "https://via.placeholder.com/300x200.png?text=Headphone",
+          },
+        ],
+      },
+    },
   };
 
   try {
-    const response = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(message),
-    });
-    const data = await response.json();
-    console.log("🚀 تم الإرسال:", data);
-    res.json({ success: true, data });
+    const response = await fetch(
+      "https://exp.host/--/api/v2/push/send",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(message),
+      }
+    );
+
+    const result = await response.json();
+    console.log("🚀 Notification Sent:", result);
+
+    res.json({ success: true, result });
   } catch (err) {
-    console.log("❌ خطأ في الإرسال:", err);
+    console.error("❌ Error:", err);
     res.status(500).json({ success: false });
   }
 });

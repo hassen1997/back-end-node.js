@@ -1,13 +1,45 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
-const DelverSchema = new mongoose.Schema({
-    name: String,
-    email: { type: String, unique: true },
-    pushToken: String, // 🔹 مهم لإرسال الإشعار
-    pin: String,
-    pinExpires: Date,
+// 👇 Schema لكل منتج داخل المندوب
+const ProductSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true },
+  image: { type: String },
+
+  // بيانات العميل لكل منتج
+  clientName: { type: String },
+  clientPhone: { type: String },
+  clientLocation: { type: String },
+  clientArea: { type: String }, // إذا كنت تريد إضافة المنطقة
+});
+
+// 👇 Schema لكل عميل منفصل (Clients Array)
+const ClientSchema = new mongoose.Schema({
+  clientName: { type: String },
+  clientPhone: { type: String },
+  clientLocation: { type: String },
+});
+
+// 👇 Schema المندوب
+const DelverSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
     verified: { type: Boolean, default: false },
-  
-})
+    pin: { type: String },
+    pinExpires: { type: Date },
 
-module.exports = mongoose.model("Delvre", DelverSchema)
+    // حفظ كل المنتجات المرسلة لكل مندوب
+    products: { type: [ProductSchema], default: [] },
+
+    // حفظ العملاء كمصفوفة منفصلة
+    clients: { type: [ClientSchema], default: [] },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
+);
+
+module.exports = mongoose.model("Delver", DelverSchema);

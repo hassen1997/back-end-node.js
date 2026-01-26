@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../modul/Dlevre");
-const Delver = require("../modul/Dlevre"); // 🔹 هذا الحل
 const sendPinEmail = require("./sendEmailDelvere");
 
 // ================= FETCH (node-fetch) =================
@@ -9,13 +8,18 @@ const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 // ================= GET ALL USERS =================
+// ================= GET ALL USERS WITH PRODUCTS =================
 router.get("/all", async (req, res) => {
   try {
-    const users = await User.find({}, { name: 1, email: 1, _id: 1 }).sort({ createdAt: -1 });
+    const users = await User.find(
+      {},
+      { name: 1, email: 1, verified: 1, products: 1 } // ✅ أضفنا products هنا
+    ).sort({ createdAt: -1 });
+
     res.json({ success: true, users });
   } catch (err) {
     console.log(err);
-    res.json({ success: false, message: "خطأ في جلب المستخدمين" });
+    res.status(500).json({ success: false, message: "خطأ في جلب المستخدمين" });
   }
 });
 
@@ -79,67 +83,87 @@ router.post("/log", async (req, res) => {
   }
 });
 
-// ================= SAVE EXPO TOKEN =================
-router.post('/save-token', async (req, res) => {
-  const { email, token } = req.body;
+/// ================= SEND PRODUCTS TO USER =================
+router.post("/send-products", async (req, res) => {
   try {
-    const delver = await Delver.findOne({ email });
-    if (!delver) return res.status(404).send({ message: 'المندوب غير موجود' });
+    const { email, products, clientName, clientPhone, clientLocation } = req.body;
 
-    delver.pushToken = token;
-    await delver.save();
+    if (!email || !products || !Array.isArray(products))
+      return res.status(400).json({ success: false, message: "البيانات ناقصة" });
 
-    res.send({ success: true, message: 'تم حفظ التوكن بنجاح' });
+    const user = await User.findOne({ email, verified: true });
+    if (!user) return res.status(404).json({ success: false, message: "المندوب غير موثق" });
+
+    // إضافة بيانات العميل لكل منتج
+    const productsWithClient = products.map(p => ({
+      ...p,
+      clientName,
+      clientPhone,
+      clientLocation,
+    }));
+
+    // إضافة المنتجات للمندوب
+    user.products = [...user.products, ...productsWithClient];
+    await user.save();
+
+    res.json({ success: true, message: "تم إضافة المنتجات للمندوب مع بيانات العميل", products: user.products });
   } catch (err) {
-    res.status(500).send({ success: false, message: err.message });
+    console.error(err);
+    res.status(500).json({ success: false, message: "خطأ في السيرفر" });
   }
 });
+// ================= DELETE PRODUCTS =================
+router.post("/delete-products", async (req, res) => {
+  try {
+    const { clientName, clientPhone, email } = req.body;
 
-// ==================================================
-// 🔥 SEND ORDER TO EXPO (الحل النهائي الصحيح) 🔥
-// ==================================================
-async function sendPushNotification(pushToken, title, body, order) {
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Accept-encoding': 'gzip, deflate',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      to: pushToken,
-      sound: 'default',
-      title: title,
-      body: body,
-      data: { order },
-    }),
-  });
-}
-
-async function sendOrderToExpo(order) {
-  const delvers = await Delver.find({}); // كل المندوبين
-  for (const d of delvers) {
-    if (d.pushToken) {
-      await sendPushNotification(
-        d.pushToken,
-        'طلب جديد!',
-        `لديك طلب جديد من ${order.name} بقيمة ${order.totalPrice} IQD`,
-        order
-      );
+    if (!clientName || !clientPhone || !email) {
+      return res.status(400).json({ success: false, message: "البيانات ناقصة" });
     }
-  }
-}
 
-// ================= SEND ORDER ROUTE =================
-router.post("/send-order-to-expo", async (req, res) => {
-  const { email, order } = req.body;
-  try {
-    await sendOrderToExpo(order);
-    res.json({ success: true, message: "تم الإرسال للمندوبين" });
+    const user = await User.findOne({ email, verified: true });
+    if (!user) return res.status(404).json({ success: false, message: "المندوب غير موجود أو غير موثق" });
+
+    // تعديل المنتجات: حذف اسم وصورة كل منتج للعميل المحدد
+    user.products = user.products.map(p => {
+      if (p.clientName === clientName && p.clientPhone === clientPhone) {
+        return {
+          ...p,
+          title: "محذوف",      // حذف اسم المنتج
+          image: ""       // حذف صورة المنتج
+        };
+      }
+      return p;
+    });
+
+    await user.save();
+
+    // الحصول على المنتجات بعد حذف الاسماء والصور
+    const remainingProducts = user.products.filter(
+      p => p.clientName === clientName && p.clientPhone === clientPhone
+    );
+
+    // إظهار البيانات المطلوبة فقط
+    const responseData = {
+      clientName,
+      clientPhone,
+      clientLocation: remainingProducts[0]?.clientLocation || "",
+      totalProducts: remainingProducts.length,
+      totalPrice: remainingProducts.reduce((sum, p) => sum + p.price * p.quantity, 0)
+    };
+
+    res.json({ 
+      success: true, 
+      message: `تم حذف أسماء وصور المنتجات الخاصة بالعميل ${clientName}`,
+      data: responseData
+    });
+
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ success: false, message: "فشل الإرسال" });
+    console.error(err);
+    res.status(500).json({ success: false, message: "خطأ في السيرفر" });
   }
 });
+
+
 
 module.exports = router;

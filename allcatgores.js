@@ -7,7 +7,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// إعداد multer لتخزين الصور
+// ================= multer =================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads"),
   filename: (req, file, cb) =>
@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
 });
 
 // =================================
-// POST منتج جديد
+// POST إضافة منتج جديد + كمية
 // =================================
 router.post("/", upload.single("image"), async (req, res) => {
   const { error } = validateProduct(req.body);
@@ -40,6 +40,7 @@ router.post("/", upload.single("image"), async (req, res) => {
     title: req.body.title,
     price: req.body.price,
     category: req.body.category,
+    quantityAvailable: req.body.quantityAvailable || 0, // ✅ الإضافة الوحيدة
     image: req.file ? `/uploads/${req.file.filename}` : "",
   });
 
@@ -61,7 +62,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // =================================
-// PUT تحديث منتج
+// PUT تحديث منتج + كمية
 // =================================
 router.put("/:id", upload.single("image"), async (req, res) => {
   try {
@@ -77,6 +78,12 @@ router.put("/:id", upload.single("image"), async (req, res) => {
     product.title = req.body.title || product.title;
     product.price = req.body.price || product.price;
     product.category = req.body.category || product.category;
+
+    // ✅ تحديث الكمية إن وُجدت
+    if (req.body.quantityAvailable !== undefined) {
+      product.quantityAvailable = req.body.quantityAvailable;
+    }
+
     if (req.file) product.image = `/uploads/${req.file.filename}`;
 
     await product.save();
@@ -107,13 +114,56 @@ router.delete("/:id", async (req, res) => {
 });
 
 // =================================
-// Validation باستخدام Joi
+// POST إنشاء طلب ✅ تنقيص الكمية
+// =================================
+router.post("/order/create", async (req, res) => {
+  try {
+    const { items } = req.body; // array من المنتجات مع { _id, quantity }
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ success: false, message: "الطلبات فارغة" });
+    }
+
+    // التحقق من الكمية المتاحة لكل منتج
+    for (const item of items) {
+      const product = await Product.findById(item._id);
+      if (!product) return res.status(404).json({ success: false, message: `المنتج ${item._id} غير موجود` });
+
+      if (product.quantityAvailable === 0) {
+        return res.status(400).json({ success: false, message: `الكمية المتاحة للمنتج ${product.title} نفدت` });
+      }
+
+      if (item.quantity > product.quantityAvailable) {
+        return res.status(400).json({
+          success: false,
+          message: `الكمية المطلوبة للمنتج ${product.title} أكبر من المتاحة`,
+        });
+      }
+    }
+
+    // خصم الكمية من كل منتج
+    for (const item of items) {
+      const product = await Product.findById(item._id);
+      product.quantityAvailable -= item.quantity;
+      await product.save();
+    }
+
+    res.json({ success: true, message: "تم إرسال الطلب بنجاح" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "خطأ في السيرفر" });
+  }
+});
+
+// =================================
+// Validation Joi + كمية
 // =================================
 function validateProduct(obj) {
   const schema = Joi.object({
     title: Joi.string().min(3).required(),
     price: Joi.number(),
-    category: Joi.string().valid("meat", "chicken", "drinks","Offers","waters"),
+    category: Joi.string().valid("meat", "chicken", "drinks", "Offers", "waters"),
+    quantityAvailable: Joi.number().integer().min(0), // ✅ إضافة فقط
     image: Joi.string(),
   });
   return schema.validate(obj);

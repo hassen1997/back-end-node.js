@@ -18,7 +18,6 @@ const authRoutes = require("./users/auth");
 const locationRoutes = require("./users/location");
 const orderRoutes = require("./route/order");
 const delvreRoutes = require("./users/delvere")
-const test = require("./test")
 // ------------------------
 // 3️⃣ إعداد البيئة
 // ------------------------
@@ -52,16 +51,16 @@ app.use("/api/home", home);
 app.use("/api/user", locationRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/delver", delvreRoutes);
-app.use("/api" , test)
 
 // بدل أي object استخدم رابط نصي مباشرة
+const mongoURI = process.env.MONGO_URI; // ضع URI في Railway Secret
+mongoose.connect("mongodb://localhost:27017/testdb")
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.log("❌ MongoDB Error:", err));
 
-mongoose
-  .connect("mongodb://mongo:UanTvazKRuGiYcformxUyUYELjsADliW@gondola.proxy.rlwy.net:31109")
-  .then(() => console.log("✅ Mongoose Connected"))
-  .catch((err) => console.log("❌ Mongoose Error:", err));
+// مثال Google Service Account
+const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
 
-// ------------------------
 // 9️⃣ تشغيل السيرفر
 // ------------------------
 app.listen(5000,  () => {
